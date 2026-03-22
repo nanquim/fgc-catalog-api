@@ -1,0 +1,6 @@
+@FGC.Catalog.Api_HostAddress = http://localhost:5059
+
+GET {{FGC.Catalog.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -18,9 +18,20 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 #endregion
 
+#region MongoDB
+var mongoSettings = new MongoDbSettings
+{
+    ConnectionString = builder.Configuration["MongoDB:ConnectionString"] ?? "mongodb://localhost:27017",
+    DatabaseName = builder.Configuration["MongoDB:DatabaseName"] ?? "fcg"
+};
+builder.Services.AddSingleton(mongoSettings);
+builder.Services.AddSingleton<MongoDbContext>();
+#endregion
+
 #region Repositories
 builder.Services.AddScoped<IGameRepository, GameRepository>();
 builder.Services.AddScoped<IUserLibraryRepository, UserLibraryRepository>();
+builder.Services.AddScoped<IGameExtendedInfoRepository, GameExtendedInfoRepository>();
 #endregion
 
 #region Application Services

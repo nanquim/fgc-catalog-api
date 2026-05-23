@@ -70,4 +70,20 @@ public class GamesController : ControllerBase
         await _gameService.PurchaseAsync(gameId, userId);
         return Accepted(new { message = "Pedido recebido e em processamento" });
     }
+
+    [HttpGet("{id:guid}/extended")]
+    [Authorize(Roles = "User,Admin")]
+    public async Task<IActionResult> GetExtendedInfo(Guid id)
+    {
+        var result = await _gameService.GetExtendedInfoAsync(id);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPut("{id:guid}/extended")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpsertExtendedInfo(Guid id, UpsertGameExtendedInfoRequest request)
+    {
+        await _gameService.UpsertExtendedInfoAsync(id, request);
+        return NoContent();
+    }
 }

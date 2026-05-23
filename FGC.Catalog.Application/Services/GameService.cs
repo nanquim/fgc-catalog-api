@@ -9,11 +9,16 @@ namespace FGC.Catalog.Application.Services;
 public class GameService
 {
     private readonly IGameRepository _gameRepository;
+    private readonly IGameExtendedInfoRepository _extendedInfoRepository;
     private readonly IPublishEndpoint _publishEndpoint;
 
-    public GameService(IGameRepository gameRepository, IPublishEndpoint publishEndpoint)
+    public GameService(
+        IGameRepository gameRepository,
+        IGameExtendedInfoRepository extendedInfoRepository,
+        IPublishEndpoint publishEndpoint)
     {
         _gameRepository = gameRepository;
+        _extendedInfoRepository = extendedInfoRepository;
         _publishEndpoint = publishEndpoint;
     }
 
@@ -59,5 +64,46 @@ public class GameService
             game.Title,
             game.Price,
             DateTime.UtcNow));
+    }
+
+    public async Task<GameExtendedInfoResponse?> GetExtendedInfoAsync(Guid gameId)
+    {
+        var game = await _gameRepository.GetByIdAsync(gameId);
+        if (game is null) return null;
+
+        var extended = await _extendedInfoRepository.GetByGameIdAsync(gameId);
+
+        return new GameExtendedInfoResponse
+        {
+            GameId = game.Id,
+            Title = game.Title,
+            Description = game.Description,
+            Price = game.Price,
+            Screenshots = extended?.Screenshots ?? [],
+            Tags = extended?.Tags ?? [],
+            Platforms = extended?.Platforms ?? [],
+            AverageRating = extended?.AverageRating ?? 0,
+            Publisher = extended?.Publisher ?? string.Empty,
+            ReleaseYear = extended?.ReleaseYear ?? 0
+        };
+    }
+
+    public async Task UpsertExtendedInfoAsync(Guid gameId, UpsertGameExtendedInfoRequest request)
+    {
+        _ = await _gameRepository.GetByIdAsync(gameId)
+            ?? throw new ArgumentException("Jogo não encontrado");
+
+        var info = new GameExtendedInfo
+        {
+            GameId = gameId,
+            Screenshots = request.Screenshots,
+            Tags = request.Tags,
+            Platforms = request.Platforms,
+            AverageRating = request.AverageRating,
+            Publisher = request.Publisher,
+            ReleaseYear = request.ReleaseYear
+        };
+
+        await _extendedInfoRepository.UpsertAsync(info);
     }
 }

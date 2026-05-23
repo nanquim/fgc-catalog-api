@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Microsoft.Extensions.Caching.Distributed;
 using FGC.Catalog.Domain.Entities;
 using FGC.Catalog.Domain.Repositories;
 using FGC.Catalog.Application.DTOs;
@@ -8,17 +10,26 @@ namespace FGC.Catalog.Application.Services;
 
 public class GameService
 {
+    private const string GamesCacheKey = "games:all";
+    private static readonly DistributedCacheEntryOptions CacheOptions = new()
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
+    };
+
     private readonly IGameRepository _gameRepository;
     private readonly IGameExtendedInfoRepository _extendedInfoRepository;
+    private readonly IDistributedCache _cache;
     private readonly IPublishEndpoint _publishEndpoint;
 
     public GameService(
         IGameRepository gameRepository,
         IGameExtendedInfoRepository extendedInfoRepository,
+        IDistributedCache cache,
         IPublishEndpoint publishEndpoint)
     {
         _gameRepository = gameRepository;
         _extendedInfoRepository = extendedInfoRepository;
+        _cache = cache;
         _publishEndpoint = publishEndpoint;
     }
 
@@ -26,11 +37,20 @@ public class GameService
     {
         var game = new Game(request.Title, request.Description, request.Price);
         await _gameRepository.AddAsync(game);
+        await _cache.RemoveAsync(GamesCacheKey);
         return game.Id;
     }
 
     public async Task<IEnumerable<Game>> GetAllAsync()
-        => await _gameRepository.GetAllAsync();
+    {
+        var cached = await _cache.GetStringAsync(GamesCacheKey);
+        if (cached is not null)
+            return JsonSerializer.Deserialize<IEnumerable<Game>>(cached) ?? [];
+
+        var games = await _gameRepository.GetAllAsync();
+        await _cache.SetStringAsync(GamesCacheKey, JsonSerializer.Serialize(games), CacheOptions);
+        return games;
+    }
 
     public async Task<Game?> GetByIdAsync(Guid id)
         => await _gameRepository.GetByIdAsync(id);
@@ -42,6 +62,7 @@ public class GameService
 
         game.Update(request.Title, request.Description, request.Price);
         await _gameRepository.UpdateAsync(game);
+        await _cache.RemoveAsync(GamesCacheKey);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -50,6 +71,7 @@ public class GameService
             ?? throw new ArgumentException("Jogo não encontrado");
 
         await _gameRepository.DeleteAsync(game);
+        await _cache.RemoveAsync(GamesCacheKey);
     }
 
     public async Task PurchaseAsync(Guid gameId, Guid userId)

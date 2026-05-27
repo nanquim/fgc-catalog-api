@@ -59,7 +59,11 @@ builder.Services.AddMassTransit(x =>
             h.Password(builder.Configuration["RabbitMQ:Password"] ?? "guest");
         });
 
-        cfg.ConfigureEndpoints(ctx);
+        cfg.ReceiveEndpoint("payment-processed", e =>
+        {
+            e.UseRawJsonDeserializer();
+            e.ConfigureConsumer<PaymentProcessedConsumer>(ctx);
+        });
     });
 });
 #endregion

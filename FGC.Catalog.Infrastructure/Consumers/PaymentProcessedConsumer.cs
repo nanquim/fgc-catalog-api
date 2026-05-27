@@ -1,5 +1,6 @@
 using MassTransit;
 using FGC.Catalog.Application.Contracts.Events;
+using FGC.Payments.Application.Contracts.Events;
 using FGC.Catalog.Domain.Entities;
 using FGC.Catalog.Domain.Repositories;
 

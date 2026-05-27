@@ -23,11 +23,11 @@ public class GameExtendedInfoRepository : IGameExtendedInfoRepository
     public async Task UpsertAsync(GameExtendedInfo info)
     {
         var filter = Builders<GameExtendedInfo>.Filter.Eq(x => x.GameId, info.GameId);
+        var existing = await _collection.Find(filter).FirstOrDefaultAsync();
+
+        info.Id = existing?.Id ?? (info.Id == Guid.Empty ? Guid.NewGuid() : info.Id);
+
         var options = new ReplaceOptions { IsUpsert = true };
-
-        if (info.Id == Guid.Empty)
-            info.Id = Guid.NewGuid();
-
         await _collection.ReplaceOneAsync(filter, info, options);
     }
 }

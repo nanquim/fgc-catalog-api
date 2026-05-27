@@ -1,4 +1,4 @@
-namespace FGC.Catalog.Application.Contracts.Events;
+namespace FGC.Payments.Application.Contracts.Events;
 
 public record PaymentProcessedEvent(
     Guid OrderId,

@@ -4,6 +4,7 @@ using FGC.Catalog.Domain.Entities;
 using FGC.Catalog.Domain.Repositories;
 using FGC.Catalog.Application.DTOs;
 using FGC.Catalog.Application.Contracts.Events;
+using FGC.Payments.Application.Contracts.Events;
 using MassTransit;
 
 namespace FGC.Catalog.Application.Services;
@@ -19,18 +20,18 @@ public class GameService
     private readonly IGameRepository _gameRepository;
     private readonly IGameExtendedInfoRepository _extendedInfoRepository;
     private readonly IDistributedCache _cache;
-    private readonly IPublishEndpoint _publishEndpoint;
+    private readonly ISendEndpointProvider _sendEndpointProvider;
 
     public GameService(
         IGameRepository gameRepository,
         IGameExtendedInfoRepository extendedInfoRepository,
         IDistributedCache cache,
-        IPublishEndpoint publishEndpoint)
+        ISendEndpointProvider sendEndpointProvider)
     {
         _gameRepository = gameRepository;
         _extendedInfoRepository = extendedInfoRepository;
         _cache = cache;
-        _publishEndpoint = publishEndpoint;
+        _sendEndpointProvider = sendEndpointProvider;
     }
 
     public async Task<Guid> CreateAsync(CreateGameRequest request)
@@ -79,7 +80,8 @@ public class GameService
         var game = await _gameRepository.GetByIdAsync(gameId)
             ?? throw new ArgumentException("Jogo não encontrado");
 
-        await _publishEndpoint.Publish(new OrderPlacedEvent(
+        var endpoint = await _sendEndpointProvider.GetSendEndpoint(new Uri("queue:order-placed"));
+        await endpoint.Send(new OrderPlacedEvent(
             Guid.NewGuid(),
             userId,
             game.Id,
